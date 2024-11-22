@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\AbonnementController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DepartementController;
 use App\Http\Controllers\FonctionController;
 use App\Http\Controllers\Google2FAController;
 use App\Http\Controllers\ModulesController;
+use App\Http\Controllers\PlansController;
 use App\Http\Controllers\RessourceHasPermissionController;
 use App\Http\Controllers\RessourcesController;
 use App\Http\Controllers\SecteurActivityController;
@@ -41,21 +43,13 @@ Route::group(['prefix' => 'auth'], function () {
             Route::post('change-password', 'changePassword');
             Route::put('update-profile', 'updateProfile');
             Route::post('update-profile-picture', 'editProfilePicture');
-        });
-    });
-});
 
-Route::group(['prefix' => 'company'], function () {
-    Route::group(['middleware' => 'auth:sanctum'], function () {
-        Route::controller(CompanyController::class)->group(function () {
-            Route::post('store', 'store');
-            Route::put('update/{id}', 'update');
         });
     });
 });
 
 Route::group(['prefix' => 'departement'], function () {
-    Route::group(['middleware' => 'auth:sanctum'], function () {
+    Route::group(['middleware' => 'auth:sanctum', 'is_admin'], function () {
         Route::controller(DepartementController::class)->group(function () {
             Route::get('list_departement', 'index');
             Route::post('store', 'store');
@@ -98,6 +92,8 @@ Route::group(['prefix' => 'module'], function () {
             Route::get('list_module', 'index');
             Route::post('store', 'store');
             Route::put('update/{id}', 'update');
+            Route::delete('delete/{id}', 'destroy');
+            Route::post('status/{id}', 'status');
         });
     });
 });
@@ -108,9 +104,48 @@ Route::group(['prefix' => 'ressource'], function () {
             Route::get('list_ressource', 'index');
             Route::post('store', 'store');
             Route::put('update/{id}', 'update');
+            Route::delete('delete/{id}', 'destroy');
+            Route::post('status/{id}', 'status');
         });
     });
 });
+
+Route::group(['prefix' => 'plan'], function () {
+    Route::group(['middleware' => 'auth:sanctum'], function () {
+        Route::controller(PlansController::class)->group(function () {
+            Route::get('getplan', 'index');
+            Route::post('store', 'store');
+            Route::put('update/{id}', 'update');
+            Route::delete('delete/{id}', 'destroy');
+            Route::post('status/{id}', 'status');
+        });
+    });
+});
+
+Route::group(['prefix' => 'abonnement'], function () {
+    Route::group(['middleware' => 'auth:sanctum'], function () {
+        Route::group(['middleware' => 'is_admin'], function () {
+            Route::controller(AbonnementController::class)->group(function () {
+                Route::post('store', 'store');
+            });
+        });
+    });
+});
+
+
+Route::group(['middleware' => 'auth:sanctum'], function () {
+    Route::group(['prefix' => 'company'], function () {
+        Route::controller(CompanyController::class)->group(function () {
+            Route::post('store', 'store');
+            Route::get('login/{id}', 'loginCompany');
+            Route::get('byuser', 'getUserCompanies');
+            Route::group(['middleware' => 'is_company'], function () {
+                Route::put('update', 'update');
+            });
+        });
+    });
+});
+
 
 Route::group(['prefix' => 'permission'], function () {
     Route::group(['middleware' => 'auth:sanctum'], function () {

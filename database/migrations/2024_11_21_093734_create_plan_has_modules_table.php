@@ -6,18 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        Schema::create('module_has_abonnements', function (Blueprint $table) {
+        Schema::create('plan_has_modules', function (Blueprint $table) {
             $table->id();
+            $table->foreignUuid('plan_id')->constrained('plans')->onDelete('cascade');
             $table->foreignUuid('module_id')->constrained('modules')->onDelete('cascade');
-            $table->foreignUuid('abonnement_id')->constrained('abonnements')->onDelete('cascade');
-            $table->timestamps();
+            $table->boolean('status')->default(true);
+            $table->timestamps(true);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('module_has_abonnements');
+        Schema::dropIfExists('plan_has_modules');
     }
 };

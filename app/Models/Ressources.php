@@ -12,8 +12,12 @@ class Ressources extends Model
 
     protected $fillable = [
         'name',
-        'module_id'
+        'module_id',
+        'label',
+        'fonctionnalite'
     ];
 
-
+    public function module(){
+         return $this->belongsTo(Modules::class, 'module_id', 'id');
+    }
 }

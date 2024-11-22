@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('modules', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->string('name')->nullable();
-            $table->boolean('status')->default(true);
-            $table->boolean('deleted')->default(false);
-            $table->timestamps();
+        Schema::table('modules', function(Blueprint $table){
+            $table->string('icon')->after('name')->nullable();
         });
     }
 
@@ -25,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('modules');
+        Schema::table('modules', function(Blueprint $table){
+             $table->dropColumn('icon');
+        });
     }
 };

@@ -65,6 +65,19 @@ class ImageController extends Controller
         return $code;
     }
 
+    public static function generateToken()
+    {
+        $characters = '0123456789';
+        $charactersNumber = strlen($characters);
+        $code = '';
+        while (strlen($code) < 10) {
+            $position = rand(0, $charactersNumber - 1);
+            $character = $characters[$position];
+            $code = $code . $character;
+        }
+        return $code;
+    }
+
     public static function generateLicenseKey($data)
     {
         $dataString = json_encode($data);
@@ -94,5 +107,12 @@ class ImageController extends Controller
         $date = new DateTime();
         $date->modify('+' . $minute . ' minutes');
         return $date->format('Y-m-d H:i:s');
+    }
+
+    public static function addMonth($mois)
+    {
+        $date = Carbon::now();
+        $newDate = $date->addMonths($mois);
+        return $newDate->format('Y-m-d');
     }
 }

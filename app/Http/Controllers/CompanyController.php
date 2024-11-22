@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\CompanyAuth;
 use App\Models\Company;
 use App\Models\User;
 use App\Models\User_has_company;
@@ -20,7 +21,6 @@ class CompanyController extends Controller
             'email' => 'required',
             'code' => 'required',
             'phone' => 'required',
-            'fonction_id' => 'required',
         ]);
         // Create a new company in the database
         $trial = Carbon::now()->addDays(30)->format('Y-m-d');
@@ -44,7 +44,10 @@ class CompanyController extends Controller
             "trial" => $trial,
             "secteur_id" => $request->secteur_id,
             "nbr_users" => $request->nbr_users,
-            "fonction_id" => $request->fonction_id,
+            'country' => $request->country,
+            'city' => $request->city,
+            'longitude' => $request->longitude,
+            'latitude' => $request->latitude,
         ];
         $company = Company::create($data);
         // Create a new user_has_company in the database
@@ -62,46 +65,77 @@ class CompanyController extends Controller
             'fonction_id' => $request->fonction_id,
         ]);
 
-        // Return a success response
+        $token = $company->createToken('access_token');
+        // Return the company data
         return response()->json([
-            'message' => 'Company created successfully',
-            'data' => User::with('company.fonction.departement')->find(Auth::user()->id),
+            'code' => 200,
+            'message' => 'Company created successfully.',
+            'data' => User::find(Auth::user()->id),
+            'company' => $company,
+            'company_token' => $token->plainTextToken
         ], 200);
+        // Return a success response
+
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request)
     {
+        // return CompanyAuth::company($request);
         // Update the company in the database
-        $company = Company::find($id);
-        if(!$company){
+        $company = CompanyAuth::company($request);
+        if (!$company) {
             return response()->json([
                 'error' => 'Company not found.'
             ]);
         }
         if ($company->name !== $request->name) {
             $request->validate([
-                'name' => 'required|name|unique:companies'
+                'name' => 'required'
             ]);
             $company->name = $request->name;
         }
         if ($company->email !== $request->email) {
             $request->validate([
-                'email' => 'required|email|unique:companies'
+                'email' => 'required'
             ]);
             $company->email = $request->email;
-        }
-
-        if ($company->phone !== $request->phone) {
-            $request->validate([
-                'phone' => 'required|phone|unique:companies'
-            ]);
-            $company->phone = $request->phone;
         }
         $company->update($request->all());
         // Return a success response
         return response()->json([
             'message' => 'Company updated successfully',
-            'data' => User::with('company.fonction.departement')->find(Auth::user()->id),
+            'data' =>  $company,
+        ], 200);
+    }
+
+    public function loginCompany($id)
+    {
+        // Find the company by id
+        $company = Company::find($id);
+        if (!$company) {
+            return response()->json([
+                'error' => 'Company not found.'
+            ], 404);
+        }
+        $token = $company->createToken('access_token');
+        // Return the company data
+        return response()->json([
+            'code' => 200,
+            'message' => 'Company selected successfully.',
+            'data' => $company,
+            'company_token' => $token->plainTextToken
+        ], 200);
+    }
+
+    public function getUserCompanies()
+    {
+        // Get the authenticated user
+        $user = Auth::user();
+        // Return the companies data
+        return response()->json([
+            'code' => 200,
+            'message' => 'Companies retrieved successfully.',
+            'data' => $user->company()->with('secteur')->where('deleted',0)->get()
         ], 200);
     }
 

@@ -107,7 +107,7 @@ class UserController extends Controller
             ], 401);
         } else {
             // Return an error response if the authentication fails
-            $user = User::with('company.fonction.departement')->find(Auth::user()->id);
+            $user = User::find(Auth::user()->id);
             if (!$user->email_verified_at) {
                 $code = ImageController::generateCode();
                 $token = ImageController::generateLicenseKey([
@@ -145,22 +145,31 @@ class UserController extends Controller
                     'data' => $user,
                     'qr_code_url' => $qrCodeUrl,
                     'access_token' => $token->plainTextToken,
-                    'token_type' => 'Bearer',
                 ], 202);
             }
-            // $user->tokens()->delete();
+            $company = count($user->company) ? $user->company[0]: null;
+            if(!$company){
+                return response()->json([
+                    'message' => 'User authenticated successfully.',
+                    'code' => 200,
+                    'data' => $user,
+                    'access_token' => $token->plainTextToken,
+                ]);
+            }
+            $tokenComp = $company->createToken('access_token');
             return response()->json([
                 'message' => 'User authenticated successfully.',
                 'code' => 200,
                 'data' => $user,
+                'company_token'=>$tokenComp->plainTextToken,
                 'access_token' => $token->plainTextToken,
-                'token_type' => 'Bearer',
+                'company' => $company
             ]);
         }
     }
     public function getProfile(Request $request)
     {
-        $user = User::with('company.fonction.departement')->find(Auth::user()->id);
+        $user = User::find(Auth::user()->id);
         return response()->json([
             'message' => 'Profile retrieved successfully.',
             'code' => 200,
@@ -171,7 +180,7 @@ class UserController extends Controller
     public function logout(Request $request)
     {
         $user = $request->user();
-        $user->tokens()->delete();
+        $user->token()->delete();
         return response()->json([
             'message' => 'Logged out successfully.',
             'code' => 200
@@ -244,7 +253,7 @@ class UserController extends Controller
         if (hash_equals($validSignature['signature'], $validSignature['decoded'])) {
             $data = json_decode($validSignature['dataString'], true);
 
-            $user = User::with('company.fonction.departement')->find($data['user_id']);
+            $user = User::find($data['user_id']);
             if (!$user) {
                 return response()->json([
                     "message" => "Utilisateur non trouvé!",
@@ -268,7 +277,7 @@ class UserController extends Controller
                 $user->update([
                     'email_verified_at' => Carbon::now()
                 ]);
-                $user->tokens()->delete();
+
                 $token = $user->createToken('access_token', ['user']);
                 return response()->json([
                     'code' => 200,
@@ -313,7 +322,7 @@ class UserController extends Controller
         ]);
 
 
-        $user = User::with('company.fonction.departement')->find(Auth::user()->id);
+        $user = User::find(Auth::user()->id);
         if ($user->email !== $request->email) {
             $request->validate([
                 'email' => 'required|email|unique:users'

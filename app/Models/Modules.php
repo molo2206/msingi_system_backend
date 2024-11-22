@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class Modules extends Model
 {
     use HasFactory, HasUuids;
-    protected $fillable = ['name', 'label', 'fonctionnalite'];
+    protected $fillable = ['name', 'icon'];
 
     public function ressource()
     {

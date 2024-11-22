@@ -39,35 +39,18 @@ class Google2FAController extends Controller
         ]);
     }
 
-    // public function getQRCode(Request $request)
-    // {
-    //     $user = $request->user();
-
-    //     if (!$user->google2fa_secret) {
-    //         return response()->json(['message' => '2FA is not enabled'], 400);
-    //     }
-
-    //     $qrCodeUrl = (new Google2FA())->getQRCodeUrl(
-    //         config('app.name'),
-    //         $user->email,
-    //         $user->google2fa_secret
-    //     );
-
-    //     return response()->json([
-    //         'qr_code' => QrCode::size(200)->generate($qrCodeUrl),
-    //     ]);
-    // }
-
     public function verifyTwoFactorCode(Request $request)
     {
         $request->validate([
             'code' => 'required|numeric',
         ]);
 
-        $user = User::with('company.fonction.departement')->find(Auth::user()->id);
+        $user = User::find(Auth::user()->id);
         if (!$user->google2fa_secret) {
             return response()->json(['message' => 'Votre code de sécurité à expirer!'], 422);
         }
+        $company = count($user->company) ? $user->company[0]: null;
+        $tokenComp = $company->createToken('access_token');
         $token = $user->createToken('access_token', ['user']);
         $google2fa = new Google2FA();
         $isValid = $google2fa->verifyKey($user->google2fa_secret, $request->code);
@@ -77,8 +60,9 @@ class Google2FAController extends Controller
                 'message' => 'User authenticated successfully.',
                 'code' => 202,
                 'data' => $user,
+                'company_token' => $tokenComp->plainTextToken,
                 'access_token' => $token->plainTextToken,
-                'token_type' => 'Bearer',
+                'company' => $company,
             ], 202);
         }
         return response()->json(['message' => 'Votre code de sécurité n\'est pas correcte!'], 422);
