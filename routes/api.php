@@ -10,6 +10,7 @@ use App\Http\Controllers\PlansController;
 use App\Http\Controllers\RessourceHasPermissionController;
 use App\Http\Controllers\RessourcesController;
 use App\Http\Controllers\SecteurActivityController;
+use App\Http\Controllers\SuccursalesController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserHasCompanyController;
 use App\Models\SecteurActivity;
@@ -43,7 +44,8 @@ Route::group(['prefix' => 'auth'], function () {
             Route::post('change-password', 'changePassword');
             Route::put('update-profile', 'updateProfile');
             Route::post('update-profile-picture', 'editProfilePicture');
-
+            Route::post('search-user', 'Search');
+            Route::get('get-user/{id}', 'UserExist');
         });
     });
 });
@@ -127,6 +129,9 @@ Route::group(['prefix' => 'abonnement'], function () {
         Route::group(['middleware' => 'is_admin'], function () {
             Route::controller(AbonnementController::class)->group(function () {
                 Route::post('store', 'store');
+                Route::get('getabonnement', 'getAbonnement');
+                Route::get('get_one_abonnement/{id}', 'oneAbonnement');
+                Route::put('update/{id}', 'update');
             });
         });
     });
@@ -139,8 +144,26 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
             Route::post('store', 'store');
             Route::get('login/{id}', 'loginCompany');
             Route::get('byuser', 'getUserCompanies');
+            Route::get('getCompanies', 'getAllCompanies');
             Route::group(['middleware' => 'is_company'], function () {
                 Route::put('update', 'update');
+                Route::get('getabo_by_company', 'getByCompany');
+                Route::get('check_abonnement', 'CheckAbonnement');
+                Route::get('users', 'getUserCompany');
+            });
+        });
+
+        Route::group(['middleware' => 'is_company'], function () {
+            Route::controller(SuccursalesController::class)->group(function () {
+                Route::get('/succursale/get', 'index');
+                Route::post('/succursale/store', 'store');
+                Route::put('/succursale/update/{id}', 'update');
+                Route::delete('/succursale/delete/{id}', 'destroy');
+                Route::post('/succursale/status/{id}', 'status');
+                Route::post('/succursale/affected', 'Affectation');
+                Route::put('/succursale/update-affectation', 'updateAffectation');
+                Route::delete('/succursale/delete-affectation', 'deleteAffectation');
+                Route::post('/succursale/status-affectation', 'statusAffectation');
             });
         });
     });

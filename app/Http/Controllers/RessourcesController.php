@@ -20,7 +20,6 @@ class RessourcesController extends Controller
 
     public function store(Request $request)
     {
-
         $request->validate([
             'name' => 'required|unique:ressources',
             'module_id' => 'required',
@@ -30,11 +29,11 @@ class RessourcesController extends Controller
 
         $ressource = Ressources::create($request->all());
         return response()->json([
-            'code' => 201,
+            'code' => 200,
             'message' => 'Ressource created successfully',
             'data' => $ressource->with('module')->where('status', 1)
                 ->where('deleted', 0)->orderBy('name', 'ASC')->get()
-        ]);
+        ],200);
     }
 
     public function update(Request $request, $id)

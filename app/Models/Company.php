@@ -10,6 +10,7 @@ use Laravel\Sanctum\HasApiTokens;
 class Company extends Model
 {
     use HasApiTokens, HasFactory, HasUuids;
+    protected $appends = ["modules"];
     protected $fillable =
     [
         'name',
@@ -39,12 +40,16 @@ class Company extends Model
 
     public function users()
     {
-        return $this->belongsToMany(
-            User::class,
-            User_has_company::class
-        )->withPivot('fonction_id');
+        return $this->hasMany(
+            User_has_company::class,
+            'company_id',
+            'id'
+        );
     }
-
+    public function employees()
+    {
+        return $this->hasMany(User_has_company::class);
+    }
     public function fonction()
     {
         return $this->belongsToMany(
@@ -55,10 +60,46 @@ class Company extends Model
 
     public function abonnement()
     {
-        return $this->hasMany(Abonnement::class, 'company_id');
+        return $this->belongsToMany(
+            Plans::class,
+            'abonnements',
+            'company_id',
+            'plans_id',
+        )->withPivot(['company_id', 'token', 'expires', 'plans_id', 'total_price']);;
     }
 
-    public function secteur(){
-        return $this->belongsTo(SecteurActivity::class,'secteur_id');
+    public function abonnements()
+    {
+        return $this->hasMany(Abonnement::class, 'company_id', 'id');
+    }
+
+    public function modules()
+    {
+        return $this->hasManyThrough(
+            Modules::class,
+            Plans::class,
+            'id',
+            'id',
+            'id',
+            'plans_id'
+        )->join('abonnements', 'plans.id', '=', 'abonnements.plans_id')
+            ->join('plan_has_modules', 'plans.id', '=', 'plan_has_modules.plan_id')
+            ->where('abonnements.company_id', $this->id);
+    }
+
+    public function getModulesAttribute()
+    {
+        $abonnement = $this->abonnements()->with('plan.modules.ressource')->orderBy('created_at', 'desc')->first();
+        return $abonnement;
+    }
+
+    public function secteur()
+    {
+        return $this->belongsTo(SecteurActivity::class, 'secteur_id');
+    }
+
+    public function succursale()
+    {
+        return $this->hasMany(Succursales::class, 'company_id', 'id');
     }
 }

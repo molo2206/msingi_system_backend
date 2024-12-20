@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\CompanyAuth;
+use App\Models\Abonnement;
 use App\Models\Company;
+use App\Models\Plans;
 use App\Models\User;
 use App\Models\User_has_company;
 use Carbon\Carbon;
@@ -66,6 +68,24 @@ class CompanyController extends Controller
         ]);
 
         $token = $company->createToken('access_token');
+        //Abonnement Trial
+        $plan = Plans::where('name', "Business")->first();
+        if ($plan) {
+            $trial = Carbon::now()->addDays(15)->format('Y-m-d');
+            //Create the new abonnement in the database
+            $token_comp = ImageController::generateLicenseKey([
+                "company_id" => $company->id,
+                'expires' => $trial,
+            ]);
+
+            Abonnement::create([
+                'company_id' => $company->id,
+                'expires' => $trial,
+                'token' => $token_comp,
+                'plans_id' => $plan->id,
+                'total_price' => 0,
+            ]);
+        }
         // Return the company data
         return response()->json([
             'code' => 200,
@@ -80,8 +100,6 @@ class CompanyController extends Controller
 
     public function update(Request $request)
     {
-        // return CompanyAuth::company($request);
-        // Update the company in the database
         $company = CompanyAuth::company($request);
         if (!$company) {
             return response()->json([
@@ -135,7 +153,45 @@ class CompanyController extends Controller
         return response()->json([
             'code' => 200,
             'message' => 'Companies retrieved successfully.',
-            'data' => $user->company()->with('secteur')->where('deleted',0)->get()
+            'data' => $user->company()->with('secteur', 'succursale')->get()
+        ], 200);
+    }
+
+    public function getAllCompanies()
+    {
+        // Get all companies
+        $companies = Company::with('secteur', 'succursale')->get();
+        // Return the companies data
+        return response()->json([
+            'code' => 200,
+            'message' => 'Companies retrieved successfully.',
+            'data' => $companies
+        ], 200);
+    }
+
+    public function getByCompany(Request $request)
+    {
+        // Get abonnements by company
+        $company = CompanyAuth::company($request);
+        $abonnements = Abonnement::with('company', 'plan')->where('company_id', $company->id)->get();
+        return response()->json([
+            'code' => 200,
+            'message' => 'Abonnements retrieved successfully',
+            'data' => $abonnements
+        ]);
+    }
+
+    public function getUserCompany(Request $request)
+    {
+        $company = CompanyAuth::company($request);
+        return Company::with(['users.item', 'users.succursales.item','users.succursales.permission'])->find($company->id);
+    }
+
+    public function CheckAbonnement()
+    {
+        // Get the authenticated user
+        return response()->json([
+            "is_valid" => true,
         ], 200);
     }
 

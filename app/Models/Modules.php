@@ -15,4 +15,14 @@ class Modules extends Model
     {
         return $this->hasMany(Ressources::class, 'module_id', 'id');
     }
+
+    public function plans()
+    {
+        return $this->belongsToMany(
+            Plans::class,
+            'plan_has_modules',
+            'module_id',
+            'plan_id'
+        );
+    }
 }

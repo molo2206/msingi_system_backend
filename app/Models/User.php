@@ -67,7 +67,7 @@ class User extends Authenticatable
         return $this->belongsToMany(
             Company::class,
             'user_has_companies'
-        )->withPivot('fonction_id');
+        )->withPivot('fonction_id','company_id','user_id');
     }
 
     public function fonction()
@@ -78,8 +78,13 @@ class User extends Authenticatable
         )->withPivot('company_id');
     }
 
+
+
     public function userverify()
     {
         return $this->hasOne(User_verify::class, 'user_id');
     }
+
+
+
 }

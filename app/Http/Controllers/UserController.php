@@ -8,6 +8,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use PragmaRX\Google2FA\Google2FA;
@@ -147,8 +148,83 @@ class UserController extends Controller
                     'access_token' => $token->plainTextToken,
                 ], 202);
             }
-            $company = count($user->company) ? $user->company[0]: null;
-            if(!$company){
+            $company = count($user->company) ? $user->company[0] : null;
+            if (!$company) {
+                return response()->json([
+                    'message' => 'User authenticated successfully.',
+                    'code' => 200,
+                    'data' => $user,
+                    'access_token' => $token->plainTextToken,
+                ]);
+            }
+
+            $tokenComp = $company->createToken('access_token');
+            return response()->json([
+                'message' => 'User authenticated successfully.',
+                'code' => 200,
+                'data' => $user,
+                'company_token' => $tokenComp->plainTextToken,
+                'access_token' => $token->plainTextToken,
+                'company' => $company
+            ]);
+        }
+    }
+    public function loginGoogle(Request $request)
+    {
+        $request->validate([
+            'email' => 'required'
+        ]);
+        // Attempt to authenticate the user
+        $google2fa = new Google2FA();
+        if (!Auth::attempt($request->only(['email', 'password']))) {
+            return response()->json([
+                'message' => 'Invalid credentials.',
+                'code' => 401
+            ], 401);
+        } else {
+            // Return an error response if the authentication fails
+            $user = User::find(Auth::user()->id);
+            if (!$user->email_verified_at) {
+                $code = ImageController::generateCode();
+                $token = ImageController::generateLicenseKey([
+                    'expires' => ImageController::addMinutes(60),
+                    'code' => $code,
+                    'user_id' => $user->id
+                ]);
+                $user->userverify()->UpdateOrCreate(
+                    ["user_id" => $user->id],
+                    ['token' => $token]
+                );
+                $data = [
+                    "code" => $code,
+                    'account' => "Here is your account!",
+                    'name' => $user->name . '' . $user->prename . '' . $user->last_name,
+                    'email' => $user->email,
+                    'password' => $request->password,
+                ];
+                Mail::to($user->email)->send(new ForgetPasswordEmail('Forgot password Request', $data));
+                return response()->json([
+                    'massage' => "Votre code de validation à ete envoyer sur votre email!" . $user->email,
+                    'data' => $token
+                ], 201);
+            }
+            $token = $user->createToken('access_token', ['user']);
+            if ($user->google2fa_secret) {
+                $qrCodeUrl = $google2fa->getQRCodeUrl(
+                    config('app.name'),
+                    $user->email,
+                    $user->google2fa_secret
+                );
+                return response()->json([
+                    'message' => 'User authenticated successfully.',
+                    'code' => 202,
+                    'data' => $user,
+                    'qr_code_url' => $qrCodeUrl,
+                    'access_token' => $token->plainTextToken,
+                ], 202);
+            }
+            $company = count($user->company) ? $user->company[0] : null;
+            if (!$company) {
                 return response()->json([
                     'message' => 'User authenticated successfully.',
                     'code' => 200,
@@ -161,7 +237,7 @@ class UserController extends Controller
                 'message' => 'User authenticated successfully.',
                 'code' => 200,
                 'data' => $user,
-                'company_token'=>$tokenComp->plainTextToken,
+                'company_token' => $tokenComp->plainTextToken,
                 'access_token' => $token->plainTextToken,
                 'company' => $company
             ]);
@@ -366,6 +442,37 @@ class UserController extends Controller
             "message" => 'Profile picture updated successfully',
             "status" => 1,
 
+        ], 200);
+    }
+    public function Search(Request $request)
+    {
+        $request->validate([
+            "keyword" => "required"
+        ]);
+        $data = User::where(DB::raw('CONCAT_WS(" ",name,prename,last_name)'), 'like', "%{$request->keyword}%")
+            ->orWhere(DB::raw('CONCAT_WS("",name,prename,last_name)'), 'like', "%{$request->keyword}%")
+            ->orWhere(DB::raw('CONCAT_WS(" ",name,prename)'), 'like', "%{$request->keyword}%")
+            ->orWhere(DB::raw('CONCAT_WS(" ",last_name,prename)'), 'like', "%{$request->keyword}%")
+            ->orWhere(DB::raw('CONCAT_WS(" ",last_name,name)'), 'like', "%{$request->keyword}%")
+            ->get();
+        return response([
+            "message" => "Success",
+            "code" => 200,
+            "data" =>  $data
+        ], 200);
+    }
+    public function UserExist($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json([
+                "message" => "Id not found!",
+                "code" => 422
+            ], 422);
+        }
+        return response()->json([
+            "message" => "Info user!",
+            "data" => $user,
         ], 200);
     }
 }
